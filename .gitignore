@@ -1,0 +1,5 @@
+.vscode/
+build*/
+gcc-arm-none-eabi-*/
+newlib*/
+pyscript/
