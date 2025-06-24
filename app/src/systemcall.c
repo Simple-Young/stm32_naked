@@ -1,3 +1,7 @@
+#include <stdio.h>
+#include "swi.h"
+#include "times.h"
+#include "sys/time.h"
 #include "systemcall.h"
 
 extern const uint8_t _sheap;
@@ -64,4 +68,49 @@ int _kill(int pid, int sig) {
 
 int _getpid(void) {
     return 1; // 固定返回一个伪PID
+}
+
+clock_t _times (struct tms *tp){
+    clock_t timeval;
+    printf("times called\n");
+// #ifdef ARM_RDI_MONITOR
+// timeval = do_AngelSWI (AngelSWI_Reason_Clock, NULL);
+// #else
+// register int r0 asm("r0");
+// asm ("swi %a1" : "=r" (r0): "i" (SWI_Clock));
+// timeval = (clock_t) r0;
+// #endif
+
+//     if (tp)
+//         {
+//         tp->tms_utime  = timeval;	/* user time */
+//         tp->tms_stime  = 0;	/* system time */
+//         tp->tms_cutime = 0;	/* user time, children */
+//         tp->tms_cstime = 0;	/* system time, children */
+//         }
+
+    return timeval;
+
+}
+/**
+ * @brief 获取当前时间
+ * @param tp 指向 timeval 结构体的指针，用于存储当前时间
+ * @param tzvp 指向 timezone 结构体的指针，用于存储时区信息
+ * @return 成功返回 0，失败返回 -1
+ */
+int _gettimeofday (struct timeval * tp, void * tzvp){
+    struct timezone *tzp = tzvp;
+    if(tzp) {
+        tzp->tz_minuteswest = 8 * 60; // 设置为北京时间（UTC+8）
+        tzp->tz_dsttime = 0; // 不使用夏令时
+    }
+    if (!tp) {
+        return -1;
+    }
+    
+    tp->tv_sec = 1000; // 设置为 0 秒
+    tp->tv_usec = 1000*1000; // 设置为 0 微秒   
+
+  return 0;
+
 }

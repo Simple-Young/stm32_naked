@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
+
+#include <time.h>
+
+#include "isr_handler.h"
 
 #define PERIPH_BASE             0x40000000U /*!< Peripheral base address in the alias region */
 #define AHBPERIPH_BASE          (PERIPH_BASE + 0x00020000U)
@@ -66,7 +71,6 @@
 #define RCC_CFGR_PPRE1_DIV2     (4 << 8)
 #define RCC_CFGR_PPRE2_DIV1     (0 << 11)
 
-
 #define FLASH_BASE              (AHBPERIPH_BASE + 0x00002000U)  
 #define FLASH_ACR               (*(volatile uint32_t *)(FLASH_BASE + 0x00))
 
@@ -90,89 +94,17 @@
 #define BUAUD_RATE_115200       115200
 #define BUAUD_RATE              BUAUD_RATE_115200
 
-// 提供默认的中断处理函数
-void Default_Handler(void)
-{
-    while (1);  // 卡死
-}
-
-void NMI_Handler(void){
-    while (1);  // 卡死
-}
-void HardFault_Handler(void) {
-    GPIOB_ODR &= ~(1 << 12);
-    while (1);  // 卡死
-}
-void MemManage_Handler(void) {
-    while (1);  // 卡死
-}
-void BusFault_Handler(void) {
-    while (1);  // 卡死
-}
-void UsageFault_Handler(void) {
-    while (1);  // 卡死
-}
-void SVC_Handler(void) {
-    while (1);  // 卡死
-}
-void DebugMon_Handler(void) {
-    while (1);  // 卡死
-}
-void PendSV_Handler(void) {
-    while (1);  // 卡死
-}
-
-// External Interrupts
-void WWDG_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void PVD_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void TAMPER_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void RTC_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void FLASH_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void RCC_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void EXTI0_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void EXTI1_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void EXTI2_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void EXTI3_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void EXTI4_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void DMA1_Channel1_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void DMA1_Channel2_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void DMA1_Channel3_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void DMA1_Channel4_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void DMA1_Channel5_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void DMA1_Channel6_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void DMA1_Channel7_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void ADC1_2_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void USB_HP_CAN1_TX_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void USB_LP_CAN1_RX0_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void CAN1_RX1_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void CAN1_SCE_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void EXTI9_5_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void TIM1_BRK_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void TIM1_UP_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void TIM1_TRG_COM_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void TIM1_CC_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void TIM2_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void TIM3_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void TIM4_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void I2C1_EV_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void I2C1_ER_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void I2C2_EV_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void I2C2_ER_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void SPI1_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void SPI2_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-// void USART1_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void USART2_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void USART3_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void EXTI15_10_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void RTCAlarm_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
-void USBWakeUp_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
 
 volatile uint32_t systick_counter = 0;
 
 void SysTick_Handler(void)
 {
-    // GPIOB_ODR &= ~(1 << 12);
     systick_counter++;
+}
+
+uint32_t get_time_ms(void)
+{
+    return systick_counter;
 }
 
 void delay_ms(uint32_t ms)
@@ -453,7 +385,21 @@ extern const uint8_t _ebss;
 // }
 
 /*================================================================================*/
+#include <inttypes.h>
+#include <stdarg.h>
 
+void test_64(char *format, ...){
+    int64_t num;
+    va_list ap;
+    va_start(ap, format);
+    num = va_arg(ap, int64_t);
+    if(num == 1000){
+        uart1_send_char('S');
+    }else{
+        uart1_send_char('T');
+    }
+    va_end(ap);
+}
 
 int main(){
 
@@ -462,23 +408,30 @@ int main(){
     systick_init();
     uart1_init();
     
-    RCC_APB2ENR |= RCC_IOPBEN;      // 使能 GPIOC 时钟
-    GPIOB_CRH &= ~(0xF << 16);      // 清除 PB12 的配置位
-    GPIOB_CRH |=  (0x3 << 16);      // 设置 PB12 为推挽输出
-    GPIOB_ODR |= (1 << 12); 
-    
-    uint8_t *buff = malloc(100);
-    if (buff != NULL) {
-        memset(buff, 0, 100); // 初始化分配的内存
-    }
+    // RCC_APB2ENR |= RCC_IOPBEN;      // 使能 GPIOC 时钟
+    // GPIOB_CRH &= ~(0xF << 16);      // 清除 PB12 的配置位
+    // GPIOB_CRH |=  (0x3 << 16);      // 设置 PB12 为推挽输出
+    // GPIOB_ODR |= (1 << 12); 
+    // uint8_t *buff = malloc(100);
+    // if (buff != NULL) {
+    //     memset(buff, 0, 100); // 初始化分配的内存
+    // }
+    // memcpy(buff, "Hello, STM32!", 13); // 拷贝字符串到分配的内存
+    // printf("Buffer content: %s\r\n", buff);
+    // printf("Hello, %s! Number: %d, Char: %c\r\n", "STM32", 123, 'A');
+    // size_t size = malloc_usable_size(buff); // 获取分配内存的大小
+    // printf("Allocated buffer size: %lu bytes\r\n", size);
+    // printf("buff ptr: %p\r\n", buff);
 
-    memcpy(buff, "Hello, STM32!", 13); // 拷贝字符串到分配的内存
-    printf("Buffer content: %s\r\n", buff);
-    printf("Hello, %s! Number: %d, Char: %c\r\n", "STM32", 123, 'A');
+    // time_t now = time(NULL); // 获取当前时间
+    // printf("Current time: %s", ctime(&now)); // 打印当前时间
+    // struct tm *local_time = localtime(&now); // 转换为本地时间结构体
+    // printf("Current time: %02d:%02d:%02d\r\n", local_time->tm_hour, local_time->tm_min, local_time->tm_sec);
+    // 设置时区
     
-    size_t size = malloc_usable_size(buff); // 获取分配内存的大小
-    printf("Allocated buffer size: %lu bytes\r\n", size);
-    printf("buff ptr: %p\r\n", buff);
+    time_t t = time(NULL);
+    // test_64("%lld", t); // 测试 int64_t 参数传递
+    printf("%lld",t);
 
     while (1){
         
